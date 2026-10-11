@@ -36,7 +36,7 @@ List<Task> buildDummyTasks(List<String> assigneeIds) {
     ),
     make(
       'Implement local storage',
-      'Save tasks with SharedPreferences. High priority, so the 72h window applies.',
+      'Save tasks with SQLite database. High priority, so the 72h window applies.',
       Priority.high,
       const Duration(hours: 60),
     ),
