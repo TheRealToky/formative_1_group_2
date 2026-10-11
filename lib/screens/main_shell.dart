@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:sla_tracker/models/team_member.dart';
 import 'package:sla_tracker/screens/sign_in_screen.dart';
 import 'package:sla_tracker/screens/task_list_screen.dart';
+import 'package:sla_tracker/screens/team_profile_screen.dart';
 
 class MainShell extends StatefulWidget {
   final TeamMember currentUser;
@@ -27,7 +28,7 @@ class _MainShellState extends State<MainShell> {
     final pages = <Widget>[
       _PlaceholderTab(label: 'Home tab\nWelcome, ${widget.currentUser.name}'),
       const TaskListScreen(),
-      const _PlaceholderTab(label: 'Team tab'),
+      const TeamProfileScreen(),
       _PlaceholderTab(
         label: 'Profile tab\nSigned in as ${widget.currentUser.name}',
       ),
