@@ -3,9 +3,6 @@
 > A Flutter mobile application for small software development teams to manage tasks, assign team members, configure priorities and deadlines, and receive real-time SLA status feedback (**On Track**, **At Risk**, **Overdue**, and **Completed**).  
 > Built for the **Formative 1** group project.
 
-> [!NOTE]
-> Items marked `[TODO]` must be finalized by the group prior to final submission.
-
 ---
 
 ## Table of Contents
@@ -180,27 +177,12 @@ flutter analyze
 flutter run
 ```
 
-> [!TIP]
-> Run the application on an Android emulator or a physical device, as the project assignment requires mobile execution.
-
 ### App Usage Walkthrough
 
 1. **Sign In**: Enter a username (2+ characters) and a password (4+ characters).
 2. **Create Tasks**: Under the **Tasks** tab, tap `+` to create a task with a title, priority, assignee, and deadline.
 3. **Inspect & Edit**: Tap any task card to view details, inspect change history, edit fields, or mark complete.
 4. **Monitor SLA & Team**: Review SLA chips on the **Dashboard** and view member workloads on the **Team** tab.
-
----
-
-## Team and Contributions
-
-| Member | Branch | Contribution |
-| :--- | :--- | :--- |
-| `[TODO name]` | `feature/createand-edit-tasks+profile` | Create/Edit Task screen, Team & Profile screen, MainShell integration |
-| `[TODO name]` | `feature/queens-screen` | `[TODO]` |
-| `[TODO name]` | `[TODO]` | `[TODO]` |
-
-- **Group Contribution Tracker**: `[TODO link]`
 
 ---
 
@@ -211,17 +193,10 @@ flutter run
 - **Shared Files Coordination**: Edits to shared files (e.g., `main_shell.dart`) are planned in minimal, separate PRs and communicated to the team beforehand.
 - **Clean Repository**: Auto-generated platform files (e.g., `linux/`, `macos/`, `windows/` plugin registrants) are excluded from commits.
 
-### Pull Requests Summary
-- `#3 Improve Create/Edit Task and Team Profile Screens`
-  - Connected Team tab to `TeamProfileScreen` in `MainShell`
-  - Consolidated profile and team into a unified view
-- `[TODO: complete this list from GitHub]`
-
 ---
 
 ## Known Limitations
 
-- **Home / Dashboard**: Dashboard includes SLA metrics and "Needs Attention" tasks; review against the final assignment requirements before submission. `[TODO]`
 - **Roles**: Visual mockups display roles (e.g., "Developer"), but when unassigned, screens fall back to default role labels.
 - **Authentication**: Authentication validates credentials and maintains local sessions; remote identity verification is out of scope.
 - **Deleted Members**: If a member were deleted, editing their existing tasks defaults the assignee dropdown to the first available member.
