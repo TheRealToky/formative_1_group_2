@@ -14,7 +14,7 @@ class MainShell extends StatefulWidget {
 
 class _MainShellState extends State<MainShell> {
   int _index = 1; // start on the Tasks tab
-  static const _titles = ['Home', 'Tasks', 'Team', 'Profile'];
+  static const _titles = ['Home', 'Tasks', 'Team & Profile'];
 
   void _signOut() {
     Navigator.pushReplacement(
@@ -29,9 +29,6 @@ class _MainShellState extends State<MainShell> {
       _PlaceholderTab(label: 'Home tab\nWelcome, ${widget.currentUser.name}'),
       const TaskListScreen(),
       const TeamProfileScreen(),
-      _PlaceholderTab(
-        label: 'Profile tab\nSigned in as ${widget.currentUser.name}',
-      ),
     ];
 
     return Scaffold(
@@ -53,7 +50,6 @@ class _MainShellState extends State<MainShell> {
           NavigationDestination(icon: Icon(Icons.home), label: 'Home'),
           NavigationDestination(icon: Icon(Icons.checklist), label: 'Tasks'),
           NavigationDestination(icon: Icon(Icons.group), label: 'Team'),
-          NavigationDestination(icon: Icon(Icons.person), label: 'Profile'),
         ],
       ),
     );
