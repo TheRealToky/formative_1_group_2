@@ -1,5 +1,7 @@
+import 'dart:io' show Platform;
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:path/path.dart' as p;
-import 'package:sqflite/sqflite.dart';
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 import 'demo_seed.dart';
 import 'schema.dart';
@@ -17,6 +19,10 @@ class AppDatabase {
   /// [path] defaults to the app's databases folder. Pass `inMemoryDatabasePath`
   /// in tests. Set [seed] to false for a clean production database.
   static Future<Database> open({String? path, bool seed = true}) async {
+    if (!kIsWeb && (Platform.isWindows || Platform.isLinux)) {
+      sqfliteFfiInit();
+      databaseFactory = databaseFactoryFfi;
+    }
     final dbPath = path ?? p.join(await getDatabasesPath(), 'task_tracker.db');
     return openDatabase(
       dbPath,
