@@ -2,289 +2,242 @@ import 'package:flutter/material.dart';
 import '../models/task.dart';
 import '../models/team_member.dart';
 import '../services/storage_service.dart';
-
+import 'sign_in_screen.dart';
+ 
 class TeamProfileScreen extends StatefulWidget {
-  const TeamProfileScreen({super.key});
-
+  final TeamMember? currentUser; // passed in by MainShell
+ 
+  const TeamProfileScreen({super.key, this.currentUser});
+ 
   @override
   State<TeamProfileScreen> createState() => _TeamProfileScreenState();
 }
-
+ 
 class _TeamProfileScreenState extends State<TeamProfileScreen> {
   final storage = StorageService();
-
+ 
+  static const blue = Color(0xFF1D4ED8);
+  static const navy = Color(0xFF14213D);
+ 
+  // Avatar colors, reused in order for each member
+  static const avatarColors = [
+    Color(0xFF9A3412),
+    Color(0xFF1E3A8A),
+    Color(0xFF374151),
+    Color(0xFF166534),
+  ];
+ 
   List<TeamMember> members = [];
   List<Task> tasks = [];
-  String? currentUserId;
-  bool loading = true;
-
-  final navy = const Color(0xFF14213D);
-  final blue = const Color(0xFF2453D4);
-  final colors = [
-    const Color(0xFF2453D4),
-    const Color(0xFF9B3518),
-    const Color(0xFF243F91),
-    const Color(0xFF374151),
-  ];
-
+  TeamMember? me; // the signed-in user
+ 
   @override
   void initState() {
     super.initState();
-    loadData();
+    load();
   }
-
-  Future<void> loadData() async {
+ 
+  Future<void> load() async {
     final loadedMembers = await storage.loadMembers();
     final loadedTasks = await storage.loadTasks();
-    final userId = await storage.getCurrentUserId();
-
+    final myId = await storage.getCurrentUserId();
+ 
+    // Find the signed-in user in the member list
+    TeamMember? current;
+    for (final member in loadedMembers) {
+      if (member.id == myId) current = member;
+    }
+ 
     if (!mounted) return;
     setState(() {
       members = loadedMembers;
       tasks = loadedTasks;
-      currentUserId = loadedMembers.any((m) => m.id == userId)
-          ? userId
-          : (loadedMembers.isEmpty ? null : loadedMembers.first.id);
-      loading = false;
+      // Prefer the user MainShell gave us; fall back to the saved id
+      me = widget.currentUser ?? current;
     });
   }
-
-  List<Task> memberTasks(TeamMember member) =>
-      tasks.where((task) => task.assigneeId == member.id).toList();
-
-  int openCount(TeamMember member) =>
-      memberTasks(member).where((task) => !task.isCompleted).length;
-
-  double progress(TeamMember member) {
-    final assigned = memberTasks(member);
-    if (assigned.isEmpty) return 0;
-    final completed = assigned.where((task) => task.isCompleted).length;
-    return completed / assigned.length;
+ 
+  // How many unfinished tasks does this person have?
+  int openTasks(String memberId) {
+    return tasks.where((t) => t.assigneeId == memberId && !t.isCompleted).length;
   }
-
-  Widget avatar(TeamMember member) {
-    final index = members.indexOf(member);
+ 
+  void signOut() {
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (_) => const SignInScreen()),
+    );
+  }
+ 
+  // Round avatar with the first letter of the name
+  Widget avatar(String name, Color color, double size) {
     return CircleAvatar(
-      radius: 24,
-      backgroundColor: colors[index % colors.length],
+      radius: size,
+      backgroundColor: color,
       child: Text(
-        member.name.isEmpty ? '?' : member.name[0].toUpperCase(),
+        name.isEmpty ? '?' : name[0].toUpperCase(),
         style: const TextStyle(
           color: Colors.white,
-          fontSize: 19,
           fontWeight: FontWeight.bold,
+          fontSize: 20,
         ),
       ),
     );
   }
-
-  void showTasks(TeamMember member) {
-    final assigned = memberTasks(member);
-
-    showModalBottomSheet(
-      context: context,
-      showDragHandle: true,
-      backgroundColor: Colors.white,
-      builder: (context) => ListView(
-        padding: const EdgeInsets.all(20),
+ 
+  // The dark card at the top showing the current user
+  Widget profileCard() {
+    final name = me?.name ?? 'Guest';
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: navy,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Row(
         children: [
-          Text(
-            '${member.name}’s tasks',
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: navy,
-            ),
-          ),
-          const SizedBox(height: 12),
-          if (assigned.isEmpty)
-            const Text('No tasks assigned yet.'),
-          ...assigned.map(
-            (task) => ListTile(
-              contentPadding: EdgeInsets.zero,
-              title: Text(task.title),
-              subtitle: Text(
-                task.isCompleted ? 'Completed' : 'Open',
-              ),
-              trailing: Text(
-                task.priority.name.toUpperCase(),
-                style: TextStyle(
-                  color: blue,
+          avatar(name, blue, 32),
+          const SizedBox(width: 16),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                name,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 20,
                   fontWeight: FontWeight.bold,
-                  fontSize: 12,
                 ),
               ),
-            ),
+              // TeamMember has no role field, so we show a general label
+              const Text('Team member · You',
+                  style: TextStyle(color: Colors.white, fontSize: 16)),
+            ],
           ),
         ],
       ),
     );
   }
-
-  void signOut() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Sign-out is not connected yet.'),
+ 
+  // One white card per team member
+  Widget memberCard(TeamMember member, int index) {
+    final open = openTasks(member.id);
+ 
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: const Color(0xFFE5E7EB)),
       ),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    if (loading) {
-      return const Center(child: CircularProgressIndicator());
-    }
-
-    final me = members.where((m) => m.id == currentUserId).firstOrNull;
-
-    return Scaffold(
-      backgroundColor: const Color(0xFFF7F8FC),
-      appBar: AppBar(
-        title: Text(
-          'Team & Profile',
-          style: TextStyle(
-            color: navy,
-            fontWeight: FontWeight.bold,
-            fontSize: 24,
-          ),
-        ),
-        backgroundColor: const Color(0xFFF7F8FC),
-        foregroundColor: navy,
-        elevation: 0,
-      ),
-      body: members.isEmpty
-          ? const Center(child: Text('No team members yet.'))
-          : ListView(
-              padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+      child: Row(
+        children: [
+          avatar(member.name, avatarColors[index % avatarColors.length], 24),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Container(
-                  padding: const EdgeInsets.all(18),
-                  decoration: BoxDecoration(
-                    color: navy,
-                    borderRadius: BorderRadius.circular(18),
-                  ),
-                  child: Row(
-                    children: [
-                      if (me != null) avatar(me),
-                      const SizedBox(width: 14),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              me?.name ?? 'Your profile',
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 20,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            const Text(
-                              'Team member · You',
-                              style: TextStyle(color: Colors.white70),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 26),
                 Text(
-                  'Team members',
-                  style: TextStyle(
+                  member.name,
+                  style: const TextStyle(
                     color: navy,
-                    fontSize: 19,
+                    fontSize: 18,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-                const SizedBox(height: 12),
-                ...members.where((m) => m.id != currentUserId).map((member) {
-                  return Card(
-                    elevation: 0,
-                    color: Colors.white,
-                    margin: const EdgeInsets.only(bottom: 12),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                      side: const BorderSide(color: Color(0xFFE4E7ED)),
-                    ),
-                    child: InkWell(
-                      onTap: () => showTasks(member),
-                      borderRadius: BorderRadius.circular(16),
-                      child: Padding(
-                        padding: const EdgeInsets.all(14),
-                        child: Row(
-                          children: [
-                            avatar(member),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    member.name,
-                                    style: TextStyle(
-                                      color: navy,
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 16,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 3),
-                                  const Text(
-                                    'Team member',
-                                    style: TextStyle(color: Colors.grey),
-                                  ),
-                                  const SizedBox(height: 10),
-                                  ClipRRect(
-                                    borderRadius: BorderRadius.circular(8),
-                                    child: LinearProgressIndicator(
-                                      value: progress(member),
-                                      minHeight: 6,
-                                      backgroundColor:
-                                          const Color(0xFFE5E7EB),
-                                      color: blue,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            const SizedBox(width: 10),
-                            Text(
-                              '${openCount(member)} open',
-                              style: TextStyle(
-                                color: navy,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 12,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  );
-                }),
-                const SizedBox(height: 20),
-                SizedBox(
-                  height: 52,
-                  child: OutlinedButton(
-                    onPressed: signOut,
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: navy,
-                      backgroundColor: Colors.white,
-                      side: const BorderSide(color: Color(0xFFD9DDE5)),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                    ),
-                    child: const Text(
-                      'Sign out',
-                      style: TextStyle(fontWeight: FontWeight.w600),
-                    ),
+                // TeamMember has no role field, so we show a general label
+                const Text('Team member',
+                    style: TextStyle(color: Color(0xFF5B6475))),
+                const SizedBox(height: 8),
+                // Bar grows with open tasks (10 open tasks = full bar)
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(10),
+                  child: LinearProgressIndicator(
+                    value: (open / 10).clamp(0.0, 1.0),
+                    minHeight: 6,
+                    color: blue,
+                    backgroundColor: const Color(0xFFE5E7EB),
                   ),
                 ),
               ],
             ),
+          ),
+          const SizedBox(width: 12),
+          Text(
+            '$open open',
+            style: const TextStyle(color: navy, fontWeight: FontWeight.bold),
+          ),
+        ],
+      ),
+    );
+  }
+ 
+  @override
+  Widget build(BuildContext context) {
+    // Show everyone except the signed-in user
+    final others = members.where((m) => m.id != me?.id).toList();
+ 
+    return Container(
+      color: const Color(0xFFF5F6F8),
+      child: Column(
+        children: [
+          Expanded(
+            // Pull down to refresh the task counts
+            child: RefreshIndicator(
+              onRefresh: load,
+              child: ListView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
+                children: [
+                  const Text(
+                    'Team & Profile',
+                    style: TextStyle(
+                      color: navy,
+                      fontSize: 28,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  profileCard(),
+                  const SizedBox(height: 24),
+                  const Text(
+                    'Team members',
+                    style: TextStyle(
+                      color: navy,
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  for (int i = 0; i < others.length; i++)
+                    memberCard(others[i], i),
+                ],
+              ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+            child: SizedBox(
+              width: double.infinity,
+              height: 52,
+              child: OutlinedButton(
+                onPressed: signOut,
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: navy,
+                  backgroundColor: Colors.white,
+                  side: const BorderSide(color: Color(0xFFD0D5DD)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                ),
+                child: const Text('Sign out', style: TextStyle(fontSize: 16)),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
