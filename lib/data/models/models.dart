@@ -105,6 +105,36 @@ class Task {
 
   bool isOverdue(DateTime now) => status != TaskStatus.done && dueAt != null && dueAt!.isBefore(now);
 
+  /// Evaluates task against rubric SLA rules:
+  /// 1. Completed: status == TaskStatus.done
+  /// 2. Overdue: incomplete task with passed deadline (dueAt < now)
+  /// 3. At Risk: incomplete task whose deadline is approaching within
+  ///    a priority-based warning window (High: 72h, Medium: 48h, Low: 24h),
+  ///    or whose explicit SLA deadline is within 24h.
+  /// 4. On Track: incomplete task with comfortable deadline.
+  SlaStatus getSlaStatus([DateTime? now]) {
+    final current = (now ?? DateTime.now()).toUtc();
+    if (status == TaskStatus.done) return SlaStatus.completed;
+    if (dueAt != null && dueAt!.isBefore(current)) return SlaStatus.overdue;
+
+    final warningWindow = switch (priority) {
+      TaskPriority.high => const Duration(hours: 72),
+      TaskPriority.medium => const Duration(hours: 48),
+      TaskPriority.low => const Duration(hours: 24),
+    };
+
+    if (dueAt != null && dueAt!.difference(current) <= warningWindow) {
+      return SlaStatus.atRisk;
+    }
+
+    if (slaDueAt != null &&
+        (slaDueAt!.isBefore(current) || slaDueAt!.difference(current) <= const Duration(hours: 24))) {
+      return SlaStatus.atRisk;
+    }
+
+    return SlaStatus.onTrack;
+  }
+
   SlaState slaState(DateTime now, {Duration atRiskWindow = const Duration(hours: 24)}) {
     if (status == TaskStatus.done || slaDueAt == null) return SlaState.none;
     if (slaDueAt!.isBefore(now)) return SlaState.breached;
