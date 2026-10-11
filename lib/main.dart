@@ -2,7 +2,10 @@ import 'package:flutter/material.dart';
 
 import 'screens/sign_in_screen.dart';
 
-void main() => runApp(const MyApp());
+void main() {
+  WidgetsFlutterBinding.ensureInitialized();
+  runApp(const MyApp());
+}
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
