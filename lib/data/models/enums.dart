@@ -22,3 +22,16 @@ enum TaskPriority {
 
 /// Derived (never stored): drives the orange SLA badges in the UI.
 enum SlaState { none, onTrack, atRisk, breached }
+
+/// Explicit 4-state SLA status required by project rubrics:
+/// On Track, At Risk, Overdue, Completed.
+enum SlaStatus {
+  onTrack('On Track'),
+  atRisk('At Risk'),
+  overdue('Overdue'),
+  completed('Completed');
+
+  const SlaStatus(this.label);
+  final String label;
+}
+
