@@ -46,56 +46,64 @@ Team screen showing the signed-in user and each member's number of open tasks
 Data persists after the app is closed and reopened
 Screens
 Screen	File	Purpose
-Sign In	sign_in_screen.dart	Name and password form; finds or creates the member
+Sign In	sign_in_screen.dart	Sign in form with authentication
+Sign Up	sign_up_screen.dart	New account registration (name, role, email, password)
 Main shell	main_shell.dart	Bottom navigation between tabs
-Task List	task_list_screen.dart	Filter chips, task cards, "+" button to create
-Task Details	task_details_screen.dart	Full task info, edit, delete, mark complete
-Create/Edit Task	create_edit_task_screen.dart	Form used for both creating and editing
+Dashboard	dashboard_screen.dart	Project health metrics, SLA stats, and "Needs Attention" tasks
+Task List	task_list_screen.dart	Filter chips, search, task cards, "+" button to create
+Task Details	task_details_screen.dart	Full task info, history log, edit, delete, status toggle
+Task Edit	task_edit_screen.dart	Form used for creating and editing tasks
 Team & Profile	team_profile_screen.dart	Profile card, member cards with open task counts, sign out
-Project Dashboard	[TODO]	The Home tab is currently a placeholder; the assignment requires a dashboard screen
 SLA Status Rules
 
-Status is calculated in lib/services/sla_service.dart by getSlaStatus(task) from the deadline and completion flag.
+Status is calculated in lib/data/models/models.dart (and lib/services/sla_service.dart) from the deadline, priority SLA thresholds, and completion flag.
 
 Status	Rule
-Completed	isCompleted is true
+Completed	isCompleted is true (or status == done)
 Overdue	Not completed and the deadline has passed
-At Risk	[TODO: write the group's exact rule, e.g. "not completed and due within the next N days"]
-On Track	Not completed and not overdue or at risk
+At Risk	Not completed and within the SLA risk window (High: 72h, Medium: 48h, Low: 24h)
+On Track	Not completed and comfortable time remaining before the deadline
 
-Status is never stored. It is recalculated whenever a task is displayed, so it stays correct as time passes.
+Status is never statically persisted. It is evaluated dynamically whenever a task is queried or displayed, so it remains accurate in real time.
 
 Project Structure
 lib/
-  main.dart                     App entry point, theme, starts at SignInScreen
+  main.dart                     App entry point, theme, starts at SignInScreen / MainShell
+  data/
+    auth/                       Authentication repository and password hashing
+    db/                         SQLite AppDatabase singleton, schema, demo data seeding
+    models/                     Database models (Task, TeamMember, Project, TaskHistoryEntry)
+    repositories/               TaskRepository, MemberRepository, ProjectRepository
   models/
-    task.dart                   Task class, Priority enum, toJson/fromJson
-    team_member.dart            TeamMember class, toJson/fromJson
+    task.dart                   Task model class
+    team_member.dart            TeamMember model class
   screens/
     sign_in_screen.dart
-    main_shell.dart             Bottom navigation (Home, Tasks, Team & Profile)
+    sign_up_screen.dart
+    main_shell.dart
+    dashboard_screen.dart
     task_list_screen.dart
     task_details_screen.dart
-    create_edit_task_screen.dart
+    task_edit_screen.dart
     team_profile_screen.dart
   services/
-    storage_service.dart        Loads and saves tasks, members, current user
+    storage_service.dart        Database-backed storage service
     sla_service.dart            SLA status logic
   utils/
     date_format.dart            Date formatting helper
+    dummy_data.dart             Sample dummy tasks
   widgets/
-    status_chip.dart            Reusable colored SLA status chip
+    status_chip.dart            Reusable colored SLA status chips (StatusChip, PriorityChip, SlaStatusChip)
 
-The code is split by responsibility: models hold data, services hold logic and storage, screens hold UI, and widgets hold reusable pieces.
+The code is split by responsibility: models hold data, services and repositories hold logic and SQLite persistence, screens hold UI, and widgets hold reusable components.
 
 Data and Storage
-Current approach on main: SharedPreferences, with tasks and members saved as JSON strings.
-Why: the app stores a small amount of simple data, and Task.toJson() / Task.fromJson() make saving and loading straightforward without a database schema.
-On first launch, two default members (Alice and Brian) are created so the assignee dropdown is never empty.
-StorageService is the only class that touches storage, so screens never read or write storage directly.
-[TODO] A teammate's pull request migrates StorageService to SQLite. Update this section to say which approach was finally merged and why.
+Current approach on main: SQLite relational database using `sqflite` (mobile) and `sqflite_common_ffi` (desktop).
+Why: SQLite provides structured relations, data integrity with foreign keys, query filtering/sorting, task change audit tracking (`task_history`), and persistent user session management (`session` table) with salted and hashed passwords.
+On first launch, demo data is automatically seeded (team members, projects, and tasks representing all SLA states).
+Storage access is handled cleanly via `AppDatabase`, specialized repositories (`TaskRepository`, `MemberRepository`, `ProjectRepository`, `AuthRepository`), and `StorageService`.
 
-Main StorageService methods: loadMembers, saveMembers, loadTasks, saveTasks, getCurrentUserId, setCurrentUserId.
+Main StorageService methods: loadMembers, saveMembers, loadTasks, saveTasks, getCurrentUserId, setCurrentUserId, clearSession.
 
 Navigation
 main.dart opens SignInScreen.
